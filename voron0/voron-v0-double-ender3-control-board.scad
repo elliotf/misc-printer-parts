@@ -32,7 +32,7 @@ z_rail_spacing = 200-58*2-15;
 //mcu_spacing = z_rail_spacing + mcu_mount_difference_x;
 
 mcu_x_offsets = [
-  -12,
+  -18,
   12,
 ];
 
@@ -81,7 +81,7 @@ module mount_assembly() {
   }
 
   module position_rpi_mount() {
-    translate([-200/2,-200/2+pi_length/2,dist_front_to_back]) {
+    translate([-200/2,-200/2+pi_length/2+10,dist_front_to_back]) {
       children();
     }
   }
@@ -105,10 +105,6 @@ module mount_assembly() {
 
   position_mcus() {
     mcu_mount();
-  }
-
-  position_rpi_mount() {
-    //% pcb(rpi);
   }
 
   position_rpi_mount() {
@@ -168,10 +164,10 @@ module mount_assembly() {
 }
 
 module mcu_mount(side=0) {
-  dist_from_extrusion = 6;
+  dist_from_extrusion = 9;
 
   mount_thickness = 4;
-  mcu_post_id = 3;
+  mcu_post_id = 2.8; // thread into m3
   mcu_post_od = mcu_post_id + extrude_width*2*2*2;
   mcu_post_height = 8;
   mcu_post_bevel_height = 2;
@@ -185,7 +181,7 @@ module mcu_mount(side=0) {
 
   mount_plate_spacing_x = mcu_x_offsets[1]-mcu_x_offsets[0];
   mount_plate_spacing_y = electronics_mounting_hole_pos_y[1]-electronics_mounting_hole_pos_y[0];
-  mount_plate_center_pos_x = 0;
+  mount_plate_center_pos_x = (-mcu_x_offsets[0]-mcu_x_offsets[1])/2;
   mount_plate_center_pos_y = electronics_mounting_hole_pos_y[0]+mount_plate_spacing_y/2;
   mount_plate_outer_x = mount_plate_spacing_x+mcu_post_od;
   mount_plate_outer_y = mount_plate_spacing_y+mcu_post_od;
@@ -197,7 +193,7 @@ module mcu_mount(side=0) {
 
   module position_mounting_holes() {
     for(x=mcu_x_offsets,y=electronics_mounting_hole_pos_y) {
-      translate([x,y,0]) {
+      translate([-x,y,0]) {
         children();
       }
     }
@@ -235,7 +231,7 @@ module mcu_mount(side=0) {
             hole(mcu_post_od,mount_thickness,resolution);
           }
         }
-        translate([mcu_x_offsets[1],electronics_mounting_hole_pos_y[1],0]) {
+        translate([-mcu_x_offsets[0],electronics_mounting_hole_pos_y[1],0]) {
           hole(mcu_post_od,mount_thickness,resolution);
         }
       }
@@ -247,8 +243,7 @@ module mcu_mount(side=0) {
             hole(mcu_post_od,mount_thickness,resolution);
           }
         }
-        //translate([mcu_x_offsets[0],electronics_mounting_hole_pos_y[1],0]) {
-        translate([mcu_x_offsets[0],dist_from_extrusion+mcu_length/2+mcu_hole_pos[1][y],0]) {
+        translate([-mcu_x_offsets[1],dist_from_extrusion+mcu_length/2+mcu_hole_pos[1][y],0]) {
           hole(mcu_post_od,mount_thickness,resolution);
         }
       }
@@ -260,7 +255,7 @@ module mcu_mount(side=0) {
             hole(mcu_post_od,mount_thickness,resolution);
           }
         }
-        translate([mcu_x_offsets[0],dist_from_extrusion+mcu_length/2+mcu_hole_pos[2][y],0]) {
+        translate([-mcu_x_offsets[1],dist_from_extrusion+mcu_length/2+mcu_hole_pos[2][y],0]) {
           hole(mcu_post_od,mount_thickness,resolution);
         }
       }
@@ -320,8 +315,8 @@ module mcu_mount(side=0) {
 module rpi_mount() {
   //pi_dist_from_back = 15/2;
   pi_dist_from_back = 3;
-  pi_dist_from_extrusion = 15;
-  post_height = 6;
+  pi_dist_from_extrusion = 20;
+  post_height = 10; // reach over PoE header
   bevel_height = 1.6;
   arm_thickness = 3;
 
@@ -335,7 +330,9 @@ module rpi_mount() {
   post_od = post_id + 0.5*2*2*2;
 
   arm_support_thickness = 0.5*2;
-  extrusion_mount_length = pi_hole_spacing_x+post_od+arm_support_thickness*2;
+  extrusion_mount_hole_spacing = pi_length + 14;
+  extrusion_mount_length = extrusion_mount_hole_spacing + 12;
+  extrusion_mount_offset = -pi_hole_spacing_x/2+pi_length/2-pi_hole_from_edge;
 
   extrusion_mount_thickness = extrude_width*3*2;
   bevel_tip = post_id + 0.4*2*2;
@@ -345,7 +342,6 @@ module rpi_mount() {
 
   overall_height = pi_dist_from_back+pcb_thickness(rpi)+post_height+arm_thickness;
 
-  extrusion_mount_hole_spacing = pi_hole_spacing_x-post_od*2;
 
   module position_rpi() {
     translate([pi_width/2+pi_dist_from_extrusion,pi_length/2-pi_hole_spacing_x/2-pi_hole_from_edge,-pi_dist_from_back]) {
@@ -371,7 +367,7 @@ module rpi_mount() {
 
   module position_extrusion_mount_holes() {
     for(y=[front,rear]) {
-      translate([extrusion_mount_thickness,y*extrusion_mount_hole_spacing/2,-15/2]) {
+      translate([extrusion_mount_thickness,extrusion_mount_offset+y*extrusion_mount_hole_spacing/2,-15/2]) {
         rotate([0,90,0]) {
           children();
         }
@@ -380,7 +376,7 @@ module rpi_mount() {
   }
 
   module body() {
-    translate([extrusion_mount_thickness/2,0,-overall_height/2]) {
+    translate([extrusion_mount_thickness/2,extrusion_mount_offset,-overall_height/2]) {
       rounded_cube(extrusion_mount_thickness,extrusion_mount_length,overall_height, extrusion_mount_thickness);
     }
 
@@ -435,8 +431,9 @@ module rpi_mount() {
               translate([0,0,post_remaining/2]) {
                 hull() {
                   hole(post_od,post_remaining,resolution);
-                  translate([0,post_od/2+arm_support_thickness/2,0]) {
-                    cube([post_od,arm_support_thickness,post_remaining],center=true);
+                  translate([-post_od/4,post_od/2+arm_support_thickness/2,0]) {
+                    //# cube([post_od,arm_support_thickness,post_remaining],center=true);
+                    rounded_cube(post_od/2,arm_support_thickness,post_remaining,arm_support_thickness);
                   }
                 }
               }
@@ -450,7 +447,7 @@ module rpi_mount() {
               translate([extrusion_mount_thickness/2,0,0]) {
                 cube([0.1,arm_support_thickness,post_remaining],center=true);
               }
-              translate([pi_dist_from_extrusion+pi_hole_from_edge+pi_hole_spacing_y+post_od/2+arm_support_thickness/2,0,0]) {
+              translate([pi_dist_from_extrusion+pi_hole_from_edge+pi_hole_spacing_y-arm_support_thickness/2,0,0]) {
                 hole(arm_support_thickness,post_remaining,resolution);
               }
             }
@@ -462,8 +459,8 @@ module rpi_mount() {
               }
               translate([pi_dist_from_extrusion+pi_hole_from_edge+pi_hole_spacing_y,0,0]) {
                 hole(post_od,arm_thickness,resolution);
-                translate([0,post_od/2+arm_support_thickness/2,0]) {
-                  rounded_cube(post_od+arm_support_thickness*2,arm_support_thickness,arm_thickness,arm_support_thickness);
+                translate([-post_od/4,post_od/2+arm_support_thickness/2,0]) {
+                  rounded_cube(post_od/2,arm_support_thickness,arm_thickness,arm_support_thickness);
                 }
               }
             }
