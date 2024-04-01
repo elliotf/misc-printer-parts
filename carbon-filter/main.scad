@@ -4,7 +4,7 @@ include <lumpyscad/lib.scad>;
 magnet_diam = 4;
 magnet_thickness = 2;
 magnet_cavity_diam = magnet_diam+0.1;
-magnet_cavity_height = magnet_thickness+0.1;
+magnet_cavity_height = magnet_thickness+0.2;
 extrude_width = 0.5;
 extrude_height = 0.2;
 
@@ -26,15 +26,19 @@ magnet_overhead_x = magnet_diam + extrude_width*2;
 
 hepa_filter_height_tolerance = 4;
 hepa_filter_xy_tolerance = 1;
-hepa_width = 80+hepa_filter_xy_tolerance;
+// filter is advertised as 80x40, but is actually ~81.5x~40.8
+// the filter has some foam that seems okay to compress a little
+hepa_width = 81+hepa_filter_xy_tolerance;
 hepa_depth = 40+hepa_filter_xy_tolerance;
-hepa_thickness = 1;
-//hepa_thickness = 5;
+hepa_thickness = 15+hepa_filter_height_tolerance;
 
-rounded_diam = xy_seal_overhead*2;
+//rounded_diam = xy_seal_overhead*2;
+//rounded_diam = magnet_cavity_diam+extrude_width*3*2;
+rounded_diam = magnet_cavity_diam+extrude_width*4*2+0.3;
+echo("rounded_diam: ", rounded_diam);
 
-stack_width = hepa_width + rounded_diam + magnet_overhead_x*2;
-stack_depth = hepa_depth + rounded_diam;
+stack_width = 105;
+stack_depth = 50; //hepa_depth + rounded_diam;
 
 cavity_rounded = 4;
 
@@ -59,6 +63,7 @@ lid_stack_height = magnet_thickness+2;
 //fan_stack_height = fan_height+plenum_height+space_below_fans+hepa_thickness+hepa_filter_height_tolerance;
 fan_stack_height = fan_height+plenum_height+space_below_fans+integrated_filter_fan_height;
 carbon_stack_height = 45+hepa_filter_lip_height;
+carbon_hepa_stack_height = 45+hepa_thickness+hepa_filter_height_tolerance+hepa_filter_lip_height;
 carbon_cannister_gap = 0.4;
 carbon_cannister_container_height = carbon_stack_height-hepa_filter_lip_height-carbon_cannister_gap;
 carbon_cannister_container_width = hepa_width-carbon_cannister_gap;
@@ -68,6 +73,8 @@ echo("stack_width: ", stack_width);
 echo("stack_depth: ", stack_depth);
 echo("full stack height: ", fan_stack_height+carbon_stack_height+hepa_stack_height+lid_stack_height);
 echo("hepa_stack_height: ", hepa_stack_height);
+echo("simplified stack height: ", fan_stack_height + carbon_hepa_stack_height + lid_stack_height);
+
 //echo("full stack height: ", fan_stack_height+carbon_stack_height+lid_stack_height);
 
 module seal_and_magnet_cavity(side=top,width=stack_width,depth=stack_depth) {
@@ -114,9 +121,10 @@ module seal_and_magnet_cavity(side=top,width=stack_width,depth=stack_depth) {
   seal_depth = depth-xy_seal_overhead*2;
   seal_width = width-xy_seal_overhead*2;
   for(x=[left,right]) {
-    magnet_area_y = depth/2-xy_seal_overhead-magnet_cavity_diam/2;
+    magnet_area_y = depth/2-rounded_diam/2;
+    magnet_area_x = width/2-rounded_diam/2;
     //translate([x*(width/2-magnet_cavity_diam/2-extrude_width*3),0,0]) {
-    translate([x*(hepa_width/2+magnet_cavity_diam/2+extrude_width*2),0,0]) {
+    translate([x*(magnet_area_x),0,0]) {
       // magnets
       for(y=[front,front*0.45,rear*0.45,rear]) {
         translate([0,y*magnet_area_y,0]) {
@@ -127,7 +135,7 @@ module seal_and_magnet_cavity(side=top,width=stack_width,depth=stack_depth) {
       // m2 socket head screw registration pin
       //for(y=[front*0.5,rear*0.5]) {
       for(y=[0]) {
-        translate([x*(magnet_cavity_diam/2-m2_head_cavity/2),y*magnet_area_y,0]) {
+        translate([0,y*magnet_area_y,0]) {
           if (side > 0) {
             // top
             hole(m2_thread_into_plastic, 6*2, 16);
@@ -183,9 +191,17 @@ module seal_and_magnet_cavity(side=top,width=stack_width,depth=stack_depth) {
       }
     }
   }
+
+  translate([0,0,side*1]) {
+    % difference() {
+      cube([hepa_width+10,hepa_depth+10,1],center=true);
+      cube([hepa_width,hepa_depth,1.1],center=true);
+    }
+  }
 }
 
 module beveled_cavity(height,bottom_thickness) {
+  rounded_diam = 2;
   wall_thickness = extrude_width*3*2;
 
   cavity_depth = stack_depth-wall_thickness*2;
@@ -193,21 +209,23 @@ module beveled_cavity(height,bottom_thickness) {
 
   cavity_width = hepa_width+delta;
 
-  magnet_area_height = magnet_cavity_height+1;
-  wide_height = height-(delta+magnet_area_height)*2;
-  narrow_height = height-magnet_area_height*2;
+  wide_height = height-(delta)*2;
+  narrow_height = height-bottom_thickness*2;
 
   module body() {
-    difference() {
-      rounded_cube(hepa_width,hepa_depth,height+1,rounded_diam);
-      translate([0,0,-height/2]) {
-        cube([hepa_width*2,hepa_width*2,bottom_thickness*2],center=true);
-      }
+    translate([0,0,height/2]) {
+      rounded_cube(hepa_width,hepa_depth,height,rounded_diam);
     }
 
     hull() {
-      rounded_cube(cavity_width,cavity_depth,wide_height,rounded_diam);
-      rounded_cube(hepa_width,hepa_depth,narrow_height,rounded_diam);
+      translate([0,0,-height/2+bottom_thickness]) {
+        translate([0,0,wide_height/2]) {
+          rounded_cube(cavity_width,cavity_depth,wide_height,rounded_diam);
+        }
+        translate([0,0,narrow_height/2]) {
+          rounded_cube(hepa_width,hepa_depth,narrow_height,rounded_diam);
+        }
+      }
     }
   }
 
@@ -222,6 +240,7 @@ module beveled_cavity(height,bottom_thickness) {
 
 // thought I could save some filament but it looks like it doesn't help much
 // also, it looks goofy
+/*
 module base_stack(height) {
   wall_thickness = extrude_width*3*2;
   width = hepa_width+wall_thickness*2;
@@ -258,6 +277,7 @@ module base_stack(height) {
     holes();
   }
 }
+*/
 
 module fan_4020() {
   // 52.82 - 46.16
@@ -573,6 +593,86 @@ module carbon_cannister_lid() {
 }
 */
 
+module carbon_hepa_stack() {
+  carbon_bottom_height = 2;
+  bottom_thickness = carbon_bottom_height;
+
+  module body() {
+    rounded_cube(stack_width,stack_depth,carbon_hepa_stack_height,rounded_diam);
+  }
+
+  module holes() {
+    // debugging overhangs, etc
+    translate([0,front*stack_depth/2,0]) {
+      // cube([stack_width*2,stack_depth,carbon_hepa_stack_height*3],center=true);
+    }
+    translate([0,0,carbon_hepa_stack_height/2]) {
+      rounded_cube(hepa_width,hepa_depth,(hepa_stack_height-hepa_filter_lip_height)*2,2);
+      rounded_cube(hepa_width-hepa_filter_lip_width*2,hepa_depth-hepa_filter_lip_width*2,hepa_stack_height*3,3);
+    }
+    translate([0,0,-carbon_hepa_stack_height/2+carbon_stack_height/2]) {
+      height = carbon_stack_height;
+      rounded_diam = 2;
+      wall_thickness = extrude_width*3*2;
+
+      narrow_width = hepa_width-hepa_filter_lip_width*2;
+      narrow_depth = hepa_depth-hepa_filter_lip_width*2;
+
+      cavity_depth = stack_depth-wall_thickness*2;
+      delta = cavity_depth-hepa_depth;
+
+      cavity_width = hepa_width+delta;
+
+      wide_height = height-(delta)*2-hepa_filter_lip_width;
+      narrow_height = height-bottom_thickness*2;
+
+      hull() {
+        translate([0,0,-height/2+bottom_thickness]) {
+          translate([0,0,wide_height/2]) {
+            rounded_cube(cavity_width,cavity_depth,wide_height,rounded_diam);
+          }
+          translate([0,0,narrow_height/2]) {
+            rounded_cube(narrow_width,narrow_depth,narrow_height,rounded_diam);
+          }
+        }
+      }
+    }
+    translate([0,0,carbon_hepa_stack_height/2]) {
+      seal_and_magnet_cavity(top);
+    }
+    translate([0,0,-carbon_hepa_stack_height/2]) {
+      seal_and_magnet_cavity(bottom);
+
+      slot_fin_thickness = 0.6*2;
+      min_slot_gap_width = 2.5;
+      total_width = hepa_width+slot_fin_thickness;
+      num_gaps = floor((total_width)/(slot_fin_thickness+min_slot_gap_width));
+      spacing = (total_width)/num_gaps;
+      gap_width = spacing-slot_fin_thickness;
+
+      //echo("num_gaps: ", num_gaps);
+      //echo("spacing: ", spacing);
+      linear_extrude(height=carbon_bottom_height*2+1,center=true) {
+        for(x=[0:num_gaps-1],y=[front,0,rear]) {
+          slot_depth = (hepa_depth-slot_fin_thickness*2)/3;
+          //translate([-total_width/2+gap_width/2+slot_fin_thickness/2+x*spacing,y*(slot_fin_thickness/2+slot_depth/2),0]) {
+          translate([-total_width/2+gap_width/2+slot_fin_thickness/2+x*spacing,y*(slot_depth+slot_fin_thickness),0]) {
+            //rounded_cube(gap_width,slot_depth,carbon_stack_height*2,gap_width);
+            square([gap_width,slot_depth],center=true);
+          }
+        }
+      }
+      /*
+      */
+    }
+  }
+
+  difference() {
+    body();
+    holes();
+  }
+}
+
 module carbon_stack() {
   carbon_bottom_height = 2;
   module body() {
@@ -591,8 +691,8 @@ module carbon_stack() {
       seal_and_magnet_cavity(bottom);
 
       slot_fin_thickness = 0.6*2;
-      min_slot_gap_width = 2;
-      total_width = hepa_width+slot_fin_thickness-cavity_rounded/2;
+      min_slot_gap_width = 2.5;
+      total_width = hepa_width+slot_fin_thickness;
       num_gaps = floor((total_width)/(slot_fin_thickness+min_slot_gap_width));
       spacing = (total_width)/num_gaps;
       gap_width = spacing-slot_fin_thickness;
@@ -601,7 +701,7 @@ module carbon_stack() {
       //echo("spacing: ", spacing);
       linear_extrude(height=carbon_bottom_height*2+1,center=true) {
         for(x=[0:num_gaps-1],y=[front,0,rear]) {
-          slot_depth = (hepa_depth-cavity_rounded-slot_fin_thickness*2)/3;
+          slot_depth = (hepa_depth-slot_fin_thickness*2)/3;
           //translate([-total_width/2+gap_width/2+slot_fin_thickness/2+x*spacing,y*(slot_fin_thickness/2+slot_depth/2),0]) {
           translate([-total_width/2+gap_width/2+slot_fin_thickness/2+x*spacing,y*(slot_depth+slot_fin_thickness),0]) {
             //rounded_cube(gap_width,slot_depth,carbon_stack_height*2,gap_width);
