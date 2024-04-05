@@ -1,8 +1,8 @@
 include <NopSCADlib/lib.scad>;
 include <lumpyscad/lib.scad>; 
 
-magnet_diam = 4;
-magnet_thickness = 2;
+magnet_diam = 6;
+magnet_thickness = 3;
 magnet_cavity_diam = magnet_diam+0.1;
 magnet_cavity_height = magnet_thickness+0.2;
 extrude_width = 0.5;
@@ -42,8 +42,9 @@ stack_depth = 50; //hepa_depth + rounded_diam;
 
 cavity_rounded = 4;
 
-//extrusion_mount_width = 20; // larger size
-extrusion_mount_width = 15; // v0 size
+//extrusion_mount_depth = 20; // larger size
+extrusion_mount_stickout = 10; // v0 size
+extrusion_mount_depth = 15; // v0 size
 extrusion_mount_offset_y = 0; // rear*3.5; // if not mounted flush with outside of extrusion, not supported yet
 extrusion_mount_offset_z = top*5.6; // if not mounted flush with top of extrusion
 extrusion_mount_thickness = 3;
@@ -59,7 +60,7 @@ plenum_height = 20;
 hepa_filter_lip_height = 1;
 hepa_filter_lip_width = 1.5;
 hepa_stack_height = hepa_thickness + hepa_filter_lip_height + hepa_filter_height_tolerance;
-lid_stack_height = magnet_thickness+2;
+lid_stack_height = magnet_thickness+1;
 //fan_stack_height = fan_height+plenum_height+space_below_fans+hepa_thickness+hepa_filter_height_tolerance;
 fan_stack_height = fan_height+plenum_height+space_below_fans+integrated_filter_fan_height;
 carbon_stack_height = 45+hepa_filter_lip_height;
@@ -322,6 +323,8 @@ module fan_stack() {
   plenum_area_height = fan_stack_height/2-fan_pos_z-fan_height/2;
   fan_area_height = fan_pos_z+fan_height/2;
 
+  cable_clearance = 3;
+
   fan_channel_height = 2;
   fan_hole_opening = 29;
   //fan_post_diam = 3.4+extrude_width*2*2*2;
@@ -401,31 +404,31 @@ module fan_stack() {
           rounded_cube(stack_width,stack_depth,surround_height+2,rounded_diam);
         }
         position_extrusion_mount() {
-          translate([0,front*extrusion_mount_width/2,extrusion_mount_thickness/2]) {
+          translate([0,front*extrusion_mount_depth/2,extrusion_mount_thickness/2]) {
             // flat
             hull() {
-              translate([-extrusion_mount_width,0,0]) {
-                rounded_cube(extrusion_mount_width,extrusion_mount_width,extrusion_mount_thickness,extrusion_mount_wall_thickness);
+              translate([-extrusion_mount_stickout,0,0]) {
+                rounded_cube(extrusion_mount_wall_thickness,extrusion_mount_depth,extrusion_mount_thickness,extrusion_mount_wall_thickness);
               }
-              translate([extrusion_mount_width/2,0,0]) {
-                rounded_cube(extrusion_mount_width,extrusion_mount_width,extrusion_mount_thickness,extrusion_mount_wall_thickness);
+              translate([extrusion_mount_stickout/2,0,0]) {
+                rounded_cube(extrusion_mount_stickout,extrusion_mount_depth,extrusion_mount_thickness,extrusion_mount_wall_thickness);
               }
             }
             // braces
             for(y=[front,rear]) {
               hull() {
-                translate([0,y*(extrusion_mount_width/2-extrusion_mount_wall_thickness/2),0]) {
-                  translate([extrusion_mount_width/2,0,0]) {
-                    rounded_cube(extrusion_mount_width,extrusion_mount_wall_thickness,extrusion_mount_thickness,extrusion_mount_wall_thickness);
+                translate([0,y*(extrusion_mount_depth/2-extrusion_mount_wall_thickness/2),0]) {
+                  translate([extrusion_mount_stickout/2,0,0]) {
+                    rounded_cube(extrusion_mount_stickout,extrusion_mount_wall_thickness,extrusion_mount_thickness,extrusion_mount_wall_thickness);
                   }
-                  translate([-extrusion_mount_width,0,extrusion_mount_width-extrusion_mount_thickness/2]) {
-                    hole(extrusion_mount_wall_thickness,extrusion_mount_width*2);
+                  translate([-extrusion_mount_stickout,0,extrusion_mount_stickout-extrusion_mount_thickness/2]) {
+                    hole(extrusion_mount_wall_thickness,extrusion_mount_depth*2,resolution);
                   }
                 }
               }
             }
           }
-          translate([0,front*extrusion_mount_width/2,-15/2]) {
+          translate([0,front*extrusion_mount_depth/2,-15/2]) {
             rotate([0,90,0]) {
               % extrusion_makerbeam_xl(stack_width*0.25);
             }
@@ -531,11 +534,11 @@ module fan_stack() {
 
     position_extrusion_mount() {
       translate([0,0,-15/2]) {
-        cube([stack_width,extrusion_mount_width*2,extrusion_mount_width],center=true);
+        cube([stack_width,(extrusion_mount_depth+cable_clearance)*2,extrusion_mount_depth],center=true);
       }
-      translate([extrusion_mount_width/2,front*extrusion_mount_width/2,extrusion_mount_thickness]) {
+      translate([extrusion_mount_stickout/2,front*extrusion_mount_depth/2,extrusion_mount_thickness]) {
         extrusion_mount_hole_diam = 3.2;
-        span_width = extrusion_mount_width-extrusion_mount_wall_thickness*2;
+        span_width = extrusion_mount_depth-extrusion_mount_wall_thickness*2;
         cube([extrusion_mount_hole_diam,span_width,extrude_height*2],center=true);
         cube([extrusion_mount_hole_diam,extrusion_mount_hole_diam,extrude_height*4],center=true);
         hole(extrusion_mount_hole_diam,extrude_height*6,8);
