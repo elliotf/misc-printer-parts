@@ -8,7 +8,7 @@ magnet_cavity_height = magnet_thickness+0.2;
 extrude_width = 0.5;
 extrude_height = 0.2;
 
-m2_head_cavity = 3.3+0.3; // 0.3 is allowance
+m2_head_cavity = 4+0.3;
 m2_thread_into_plastic = 1.8;
 m3_thread_into_plastic = 2.8;
 //fan_heatset_diam = 5;
@@ -53,6 +53,7 @@ extrusion_mount_wall_thickness = extrude_width*3*2;
 //integrated_filter_fan_height = 0;
 integrated_filter_fan_height = hepa_thickness+hepa_filter_height_tolerance;
 
+num_fans = 1;
 fan_side = 40;
 fan_height = 20;
 space_below_fans = max(3,extrusion_mount_offset_z+3); // make room for fan screw heads
@@ -93,6 +94,7 @@ module seal_and_magnet_cavity(side=top,width=stack_width,depth=stack_depth) {
       }
     }
     difference() {
+      /*
       rotate_extrude($fn=resolution*2,convexity=3) {
         translate([xy_seal_overhead/2,0,0]) {
           scale([1-squish_pct,1,1]) {
@@ -100,6 +102,7 @@ module seal_and_magnet_cavity(side=top,width=stack_width,depth=stack_depth) {
           }
         }
       }
+      */
       translate([-xy_seal_overhead/2,0,0]) {
         cube([xy_seal_overhead,xy_seal_overhead*2,tpu_cavity_diam*3],center=true);
       }
@@ -315,7 +318,8 @@ translate([120,0,0]) {
 }
 
 module fan_stack() {
-  fan_spacing = 3+40;
+  //fan_spacing = 3+40;
+  fan_spacing = 0;
   fan_pos_z = -fan_stack_height/2+fan_height/2+space_below_fans;
   top_height = fan_stack_height/2-fan_pos_z-fan_height/2;
   //hepa_area_height = hepa_thickness+hepa_filter_height_tolerance;
@@ -339,11 +343,11 @@ module fan_stack() {
   shift_fan_x = -1;
 
   module position_fan() {
-    for(x=[left,right]) {
+    //for(x=[left,right]) {
       translate([shift_fan_x+x*fan_spacing/2,0,fan_pos_z]) {
         children();
       }
-    }
+    //}
   }
 
   module position_extrusion_mount() {
@@ -471,6 +475,7 @@ module fan_stack() {
       translate([x*(fan_spacing/2),0,fan_pos_z+fan_height/2]) {
         hole(fan_hole_opening,fan_channel_height*2+1,resolution*2);
 
+        /*
         rotate_extrude($fn=resolution*2,convexity=3) {
           translate([fan_hole_opening/2+xy_seal_overhead/2,-tpu_cavity_diam/2+tpu_cavity_diam*0.65,0]) {
             scale([1-squish_pct,1,1]) {
@@ -478,6 +483,7 @@ module fan_stack() {
             }
           }
         }
+        */
       }
       // plenum
       hull() {
@@ -799,12 +805,20 @@ module assembly() {
       fan_stack();
     }
 
+    translate([0,0,carbon_stack_height/2+carbon_hepa_stack_height/2]) {
+      carbon_hepa_stack();
+
+      translate([0,0,carbon_hepa_stack_height/2 + space_between]) {
+        lid_stack();
+      }
+    }
+
     translate([0,0,carbon_stack_height+space_between]) {
       translate([0,0,-carbon_stack_height/2]) {
-        carbon_stack();
+        //carbon_stack();
       }
-      translate([0,0,carbon_stack_height/2+carbon_cannister_container_depth]) {
-        //carbon_cannister_container();
+      translate([0,0,carbon_stack_height/2+carbon_hepa_stack_height]) {
+        //carbon_hepa_stack();
       }
 
       translate([0,0,lid_stack_height+space_between]) {
@@ -815,15 +829,17 @@ module assembly() {
 
       translate([0,0,hepa_stack_height+space_between]) {
         translate([0,0,-hepa_stack_height/2]) {
-          hepa_stack();
+          //hepa_stack();
         }
 
         translate([0,0,lid_stack_height+space_between]) {
           translate([0,0,-lid_stack_height/2]) {
-            lid_stack();
+            //lid_stack();
           }
         }
       }
     }
   }
 }
+
+assembly();
